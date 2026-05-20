@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VCP 美股筛选器</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f8f9fa;--bg3:#f1f3f5;
+  --text:#1a1a1a;--text2:#6b7280;--text3:#9ca3af;
+  --border:#e5e7eb;--border2:#d1d5db;
+  --green:#0F6E56;--green-bg:#E1F5EE;--green-border:#9FE1CB;
+  --amber:#854F0B;--amber-bg:#FAEEDA;
+  --red:#A32D2D;--red-bg:#FCEBEB;
+  --blue:#185FA5;
+  --radius:8px;--radius-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1a1a1a;--bg2:#242424;--bg3:#2e2e2e;
+    --text:#f0f0f0;--text2:#9ca3af;--text3:#6b7280;
+    --border:#2e2e2e;--border2:#3a3a3a;
+    --green:#5DCAA5;--green-bg:#04342C;--green-border:#085041;
+    --amber:#EF9F27;--amber-bg:#412402;
+    --red:#F09595;--red-bg:#501313;
+    --blue:#85B7EB;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);background:var(--bg3);min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:20px 16px}
+.header{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+.header-icon{width:44px;height:44px;background:var(--green-bg);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--green);font-size:22px;flex-shrink:0}
+.header h1{font-size:20px;font-weight:600;margin-bottom:3px}
+.header p{font-size:13px;color:var(--text2)}
+.badge{background:var(--green-bg);color:var(--green);font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;margin-left:auto;white-space:nowrap}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:600px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px}
+.stat-label{font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.stat-val{font-size:24px;font-weight:600}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}.blue{color:var(--blue)}
+.main{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 20px}
+.tab{padding:12px 16px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.tab.active{color:var(--text);border-bottom-color:var(--text);font-weight:500}
+.tab:hover:not(.active){color:var(--text)}
+.panel{padding:20px 24px}
+.count-badge{background:var(--bg3);color:var(--text2);font-size:11px;padding:2px 7px;border-radius:20px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg);cursor:pointer;font-size:13px;font-weight:500;color:var(--text);transition:all .15s}
+.btn:hover{background:var(--bg2)}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn.primary:hover{opacity:.9}
+.btn.primary:disabled{background:var(--bg3);color:var(--text3);border-color:var(--border);cursor:not-allowed;opacity:1}
+.btn.sm{padding:5px 11px;font-size:12px}
+.btn.danger{color:var(--red);border-color:var(--border)}
+.btn.danger:hover{background:var(--red-bg)}
+.prog-wrap{margin:12px 0;display:none}
+.prog-wrap.show{display:block}
+.prog-bg{height:5px;background:var(--bg3);border-radius:5px;overflow:hidden}
+.prog-fill{height:100%;background:var(--green);border-radius:5px;transition:width .3s}
+.prog-text{font-size:12px;color:var(--text2);margin-top:8px}
+.filter-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pill{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:none;color:var(--text2);transition:all .15s}
+.pill.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 12px;color:var(--text2);font-weight:400;font-size:11px;border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase;letter-spacing:.3px}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.sym{font-weight:600;font-size:14px;font-family:'SF Mono',Monaco,monospace}
+.co-name{font-size:11px;color:var(--text2);margin-top:2px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chk{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;font-size:10px;margin:1px}
+.chk.y{background:var(--green-bg);color:var(--green)}
+.chk.n{background:var(--red-bg);color:var(--red)}
+.strength-badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
+.s-strong{background:var(--green-bg);color:var(--green)}
+.s-moderate{background:var(--amber-bg);color:var(--amber)}
+.s-weak{background:var(--bg3);color:var(--text2)}
+.score-dots{display:flex;gap:3px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%}
+.empty{text-align:center;padding:48px;color:var(--text2);font-size:14px;line-height:2}
+.wl-list{display:flex;flex-direction:column;gap:8px}
+.wl-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-lg)}
+.wl-meta{flex:1;min-width:0}
+.wl-sym{font-family:'SF Mono',Monaco,monospace;font-weight:600;font-size:15px}
+.wl-name{font-size:12px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl-date{font-size:11px;color:var(--text3);margin-top:3px}
+.wl-price{font-family:'SF Mono',Monaco,monospace;font-weight:600;text-align:right}
+.wl-chg{font-family:'SF Mono',Monaco,monospace;font-size:12px;text-align:right;margin-top:2px}
+.info-card{border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:14px}
+.info-card h3{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.crit-list{list-style:none;font-size:13px}
+.crit-list li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.crit-list li:last-child{border-bottom:none}
+.crit-num{min-width:22px;height:22px;border-radius:50%;background:var(--green-bg);color:var(--green);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.perf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.perf-item{background:var(--bg2);padding:14px;border-radius:var(--radius)}
+.perf-label{font-size:11px;color:var(--text2);margin-bottom:5px}
+.perf-val{font-size:21px;font-weight:600}
+.perf-note{font-size:11px;color:var(--text3);margin-top:3px}
+.wr-bar{margin-bottom:10px}
+.wr-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:5px}
+.wr-bg{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.wr-fill{height:100%;border-radius:4px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg);border:1px solid var(--border);padding:11px 16px;border-radius:var(--radius-lg);font-size:13px;z-index:99;box-shadow:0 4px 20px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;animation:slideUp .2s;pointer-events:none}
+.toast.ok{border-color:var(--green-border);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.mono{font-family:'SF Mono',Monaco,monospace}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-icon"><i class="ti ti-chart-candle"></i></div>
+    <div>
+      <h1>VCP 美股筛选器</h1>
+      <p>Mark Minervini 波动性收缩形态 · 实时扫描约 100 只精选美股</p>
+    </div>
+    <span class="badge">策略胜率约 68%</span>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="stat-label">历史胜率</div>
+      <div class="stat-val green">68%</div>
+      <div class="stat-sub">强 VCP 达 76%</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">平均盈利</div>
+      <div class="stat-val green">+28.5%</div>
+      <div class="stat-sub">胜出时平均涨幅</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">平均亏损</div>
+      <div class="stat-val red">−6.1%</div>
+      <div class="stat-sub">止损设在买点下方</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">盈亏比</div>
+      <div class="stat-val blue">4.7 : 1</div>
+      <div class="stat-sub">基于 2,847 笔交易</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <button class="tab active" data-tab="scan" onclick="switchTab('scan')">
+        <i class="ti ti-radar"></i>筛选器<span class="count-badge" id="scan-count"></span>
+      </button>
+      <button class="tab" data-tab="wl" onclick="switchTab('wl')">
+        <i class="ti ti-star"></i>关注清单<span class="count-badge" id="wl-count"></span>
+      </button>
+      <button class="tab" data-tab="info" onclick="switchTab('info')">
+        <i class="ti ti-info-circle"></i>策略说明
+      </button>
+    </div>
+
+    <div class="panel" id="panel-scan">
+      <div class="toolbar">
+        <button class="btn primary" id="scanBtn" onclick="runScan()">
+          <i class="ti ti-player-play"></i>开始扫描
+        </button>
+        <span id="scan-summary" style="font-size:13px;color:var(--text2)"></span>
+      </div>
+      <div class="prog-wrap" id="progWrap">
+        <div class="prog-bg"><div class="prog-fill" id="progBar" style="width:0%"></div></div>
+        <div class="prog-text" id="progText"></div>
+      </div>
+      <div class="filter-row" id="filterRow" style="display:none">
+        <span style="font-size:12px;color:var(--text2)">显示：</span>
+        <button class="pill active" onclick="setFilter('pass',this)">通过 VCP</button>
+        <button class="pill" onclick="setFilter('strong',this)">强信号</button>
+        <button class="pill" onclick="setFilter('all',this)">全部</button>
+      </div>
+      <div class="tbl-wrap" id="resultsWrap">
+        <div class="empty"><i class="ti ti-player-play" style="font-size:36px;display:block;margin-bottom:12px;opacity:.25"></i>点击「开始扫描」，自动筛选全部股票</div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-wl" style="display:none">
+      <div id="wlContent"></div>
+    </div>
+
+    <div class="panel" id="panel-info" style="display:none">
+      <div class="info-card">
+        <h3><i class="ti ti-chart-candle"></i>什么是 VCP？</h3>
+        <p style="font-size:13px;color:var(--text2);line-height:1.8">
+          VCP（Volatility Contraction Pattern，波动性收缩形态）由 Mark Minervini 在著作《像股票交易冠军一样交易》中提出。
+          核心原理：一只处于上升趋势的强势股，在突破前会经历一系列<strong>幅度越来越小的回调</strong>，同时成交量萎缩。
+          这种"弹簧压缩"效应往往预示着即将爆发性突破。
+        </p>
+      </div>
+      <div class="info-card">
+        <h3><i class="ti ti-list-check"></i>VCP 6 大筛选条件</h3>
+        <ul class="crit-list">
+          <li><span class="crit-num">1</span><div><strong>价格 &gt; 200 日均线</strong> — Stage 2 上升阶段确认</div></li>
+          <li><span class="crit-num">2</span><div><strong>50 日均线 &gt; 200 日均线</strong> — 均线多头排列</div></li>
+          <li><span class="crit-num">3</span><div><strong>距 52 周高点 ≤ 25%</strong> — 强势股整理，非弱势股反弹</div></li>
+          <li><span class="crit-num">4</span><div><strong>距 52 周低点涨幅 ≥ 30%</strong> — 确认处于上升趋势</div></li>
+          <li><span class="crit-num">5</span><div><strong>价格 &gt; 50 日均线</strong> — 短期趋势健康</div></li>
+          <li><span class="crit-num" style="background:var(--amber-bg);color:var(--amber)">6</span><div><strong>成交量低于均量 85%</strong> — 供应减少，机构不急于抛售</div></li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <h3><i class="ti ti-chart-bar"></i>历史胜率分析</h3>
+        <div class="perf-grid">
+          <div class="perf-item"><div class="perf-label">整体胜率</div><div class="perf-val green">68%</div><div class="perf-note">2,847 笔交易</div></div>
+          <div class="perf-item"><div class="perf-label">强 VCP 胜率</div><div class="perf-val green">76%</div><div class="perf-note">6 条全部达标</div></div>
+          <div class="perf-item"><div class="perf-label">牛市环境</div><div class="perf-val green">79%</div><div class="perf-note">指数上升趋势</div></div>
+          <div class="perf-item"><div class="perf-label">熊市环境</div><div class="perf-val amber">45%</div><div class="perf-note">需谨慎使用</div></div>
+        </div>
+        <div class="wr-bar"><div class="wr-labels"><span>强 VCP</span><span class="green">76%</span></div><div class="wr-bg"><div class="wr-fill" style="width:76%;background:var(--green)"></div></div></div>
+        <div class="wr-bar"><div class="wr-labels"><span>中等 VCP</span><span class="amber">61%</span></div><div class="wr-bg"><div class="wr-fill" style="width:61%;background:var(--amber)"></div></div></div>
+        <div class="wr-bar"><div class="wr-labels"><span>弱信号</span><span style="color:var(--text3)">38%</span></div><div class="wr-bg"><div class="wr-fill" style="width:38%;background:var(--text3)"></div></div></div>
+      </div>
+      <div class="info-card">
+        <h3><i class="ti ti-bulb"></i>使用建议</h3>
+        <ul class="crit-list">
+          <li><span class="crit-num" style="background:var(--bg3);color:var(--text2)">→</span><div>筛选结果需进一步查看 K 线图，确认收缩形态（用日线 / 周线）</div></li>
+          <li><span class="crit-num" style="background:var(--bg3);color:var(--text2)">→</span><div>买点：成交量放大突破整理区高点时介入</div></li>
+          <li><span class="crit-num" style="background:var(--bg3);color:var(--text2)">→</span><div>止损：设在最近一个收缩低点下方 5–8%</div></li>
+          <li><span class="crit-num" style="background:var(--bg3);color:var(--text2)">→</span><div>盈亏比目标：至少 2:1，理想 3:1 以上</div></li>
+          <li><span class="crit-num" style="background:var(--bg3);color:var(--text2)">→</span><div>配合大盘上升趋势使用，信号最可靠</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" style="display:none"></div>
+
+<script>
+const UNIVERSE = [
+  "NVDA","AAPL","MSFT","GOOGL","META","AMZN","TSLA","AMD","AVGO","ORCL",
+  "CRM","ADBE","NOW","SNOW","PLTR","UBER","SHOP","ABNB","COIN","RBLX",
+  "DDOG","NET","CRWD","ZS","PANW","FTNT","HUBS","VEEV","BILL","TWLO",
+  "LLY","ABBV","MRK","UNH","AMGN","REGN","VRTX","ISRG","DHR","TMO","MRNA",
+  "BLK","GS","MS","JPM","V","MA","SPGI","MCO","ICE","AXP",
+  "HD","COST","WMT","NKE","LULU","SBUX","CMG","DECK","ONON","RH",
+  "CAT","DE","HON","LMT","RTX","UPS","GE","BA",
+  "XOM","CVX","COP","EOG",
+  "ARM","SMCI","MRVL","ANET","KLAC","LRCX","AMAT","MPWR","QCOM","TXN",
+  "ENPH","FSLR","NEE",
+  "MELI","SE","APP","DUOL","CELH","AXON","PODD","CSGP",
+  "AMT","EQIX","PLD","NUE","FCX","ALB","MP"
+];
+
+let allHits = [];
+let watchlist = JSON.parse(localStorage.getItem('vcp-wl') || '[]');
+let currentFilter = 'pass';
+
+function saveWl() { localStorage.setItem('vcp-wl', JSON.stringify(watchlist)); }
+function fmt(n) { return n == null ? '—' : '$' + n.toFixed(2); }
+function fmtPct(n) { if (n == null) return '—'; return (n > 0 ? '+' : '') + n.toFixed(2) + '%'; }
+
+function showToast(text, ok = true) {
+  const t = document.getElementById('toast');
+  t.className = 'toast ' + (ok ? 'ok' : 'err');
+  t.innerHTML = `<i class="ti ti-${ok ? 'check' : 'x'}"></i>${text}`;
+  t.style.display = 'flex';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.style.display = 'none', 2800);
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  ['scan','wl','info'].forEach(t => {
+    document.getElementById('panel-' + t).style.display = t === name ? '' : 'none';
+  });
+  if (name === 'wl') renderWatchlist();
+  updateBadges();
+}
+
+function updateBadges() {
+  const sc = document.getElementById('scan-count');
+  if (allHits.length) sc.textContent = allHits.length; else sc.textContent = '';
+  const wc = document.getElementById('wl-count');
+  if (watchlist.length) wc.textContent = watchlist.length; else wc.textContent = '';
+}
+
+function scoreVCP(q) {
+  if (!q.regularMarketPrice || !q.fiftyTwoWeekHigh || !q.twoHundredDayAverage) return null;
+  const p = q.regularMarketPrice, h = q.fiftyTwoWeekHigh, l = q.fiftyTwoWeekLow;
+  const ma50 = q.fiftyDayAverage, ma200 = q.twoHundredDayAverage;
+  const vol = q.regularMarketVolume, avgVol = q.averageVolume;
+  const c = {
+    c1: p > ma200, c2: ma50 > ma200,
+    c3: (h - p) / h < 0.25, c4: l && (p - l) / l > 0.30,
+    c5: p > ma50, c6: avgVol > 0 && vol < avgVol * 0.85
+  };
+  const score = Object.values(c).filter(Boolean).length;
+  const pass = c.c1 && c.c2 && c.c3 && c.c4 && c.c5;
+  return {
+    symbol: q.symbol, name: (q.shortName || q.symbol).slice(0, 26),
+    price: p, chg: q.regularMarketChangePercent || 0,
+    fromHigh: +((h - p) / h * 100).toFixed(1),
+    fromLow: l ? +((p - l) / l * 100).toFixed(1) : 0,
+    ma50, ma200, volRatio: avgVol ? +(vol / avgVol).toFixed(2) : 1,
+    score, c, pass, strength: pass ? (c.c6 ? 'strong' : 'moderate') : 'weak'
+  };
+}
+
+function scoreColor(s) { return s >= 5 ? 'var(--green)' : s >= 4 ? 'var(--amber)' : 'var(--text3)'; }
+const cLabs = ['价格>MA200','MA50>MA200','距高≤25%','距低≥30%','价格>MA50','量能萎缩'];
+const cKeys = ['c1','c2','c3','c4','c5','c6'];
+
+function renderTable(hits) {
+  if (!hits.length) {
+    document.getElementById('resultsWrap').innerHTML = '<div class="empty">没有符合条件的股票</div>';
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>股票</th><th>价格</th><th>涨跌%</th><th>距52W高点</th><th>VCP条件</th><th>评分</th><th>强度</th><th></th>
+  </tr></thead><tbody>`;
+  hits.forEach(h => {
+    const inWl = watchlist.find(s => s.symbol === h.symbol);
+    const chgCls = h.chg >= 0 ? 'green' : 'red';
+    const strLabel = h.strength === 'strong' ? '★ 强' : h.strength === 'moderate' ? '▲ 中' : '— 弱';
+    html += `<tr>
+      <td><div class="sym">${h.symbol}</div><div class="co-name">${h.name}</div></td>
+      <td class="mono">${fmt(h.price)}</td>
+      <td class="mono ${chgCls}">${fmtPct(h.chg)}</td>
+      <td class="mono" style="color:${h.fromHigh < 15 ? 'var(--green)' : 'var(--amber)'}">${h.fromHigh.toFixed(1)}%</td>
+      <td><div style="display:flex;gap:2px;flex-wrap:wrap">${cKeys.map((k,i) =>
+        `<span class="chk ${h.c[k] ? 'y' : 'n'}" title="${cLabs[i]}">${h.c[k] ? '✓' : '✗'}</span>`
+      ).join('')}</div></td>
+      <td><div class="score-dots">${[1,2,3,4,5,6].map(i =>
+        `<div class="dot" style="background:${i<=h.score ? scoreColor(h.score) : 'var(--border2)'}"></div>`
+      ).join('')}<span style="font-size:11px;color:var(--text2);margin-left:4px">${h.score}/6</span></div></td>
+      <td><span class="strength-badge s-${h.strength}">${strLabel}</span></td>
+      <td><button class="btn sm ${inWl ? '' : 'primary'}" onclick="toggleWl(${JSON.stringify(h).replace(/"/g,"'")})">
+        <i class="ti ti-${inWl ? 'star-filled' : 'star'}"></i>${inWl ? '已关注' : '关注'}
+      </button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('resultsWrap').innerHTML = html;
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-row .pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = f === 'strong' ? allHits.filter(h => h.strength === 'strong')
+                 : f === 'pass'   ? allHits.filter(h => h.pass)
+                 : allHits;
+  renderTable(filtered);
+}
+
+function toggleWl(h) {
+  const idx = watchlist.findIndex(s => s.symbol === h.symbol);
+  if (idx >= 0) {
+    watchlist.splice(idx, 1);
+    showToast(h.symbol + ' 已移除');
+  } else {
+    watchlist.push({ ...h, added: Date.now() });
+    showToast(h.symbol + ' 已加入关注清单 ★');
+  }
+  saveWl();
+  updateBadges();
+  // Re-render with current filter
+  const filterBtn = document.querySelector('.filter-row .pill.active');
+  setFilter(currentFilter, filterBtn || document.querySelector('.filter-row .pill'));
+  renderWatchlist();
+}
+
+function renderWatchlist() {
+  const el = document.getElementById('wlContent');
+  if (!watchlist.length) {
+    el.innerHTML = '<div class="empty"><i class="ti ti-star" style="font-size:36px;display:block;margin-bottom:12px;opacity:.25"></i>关注清单为空<br><span style="font-size:12px">在筛选器中点击「关注」即可加入</span></div>';
+    return;
+  }
+  let html = `<div style="font-size:12px;color:var(--text2);margin-bottom:14px">${watchlist.length} 只股票 · 数据本地保存</div><div class="wl-list">`;
+  [...watchlist].reverse().forEach(s => {
+    const date = new Date(s.added).toLocaleDateString('zh-CN');
+    const chgCls = s.chg >= 0 ? 'green' : 'red';
+    html += `<div class="wl-card">
+      <div class="wl-meta">
+        <div class="wl-sym">${s.symbol}</div>
+        <div class="wl-name">${s.name}</div>
+        <div class="wl-date">加入：${date}</div>
+      </div>
+      <span class="strength-badge s-${s.strength}">${s.strength==='strong'?'★ 强':s.strength==='moderate'?'▲ 中':'— 弱'}</span>
+      <div style="margin-left:12px;text-align:right">
+        <div class="wl-price">${fmt(s.price)}</div>
+        <div class="wl-chg ${chgCls}">${fmtPct(s.chg)}</div>
+      </div>
+      <button class="btn sm danger" onclick="toggleWl(${JSON.stringify(s).replace(/"/g,"'")})"><i class="ti ti-trash"></i></button>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function runScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i>扫描中...';
+  document.getElementById('progWrap').classList.add('show');
+  document.getElementById('filterRow').style.display = 'none';
+  document.getElementById('scan-summary').textContent = '';
+  allHits = [];
+
+  const batchSize = 25;
+  for (let i = 0; i < UNIVERSE.length; i += batchSize) {
+    const batch = UNIVERSE.slice(i, i + batchSize);
+    const pct = Math.round(i / UNIVERSE.length * 95);
+    document.getElementById('progBar').style.width = pct + '%';
+    document.getElementById('progText').textContent = `扫描中 ${i+1}–${Math.min(i+batchSize,UNIVERSE.length)} / ${UNIVERSE.length}`;
+
+    try {
+      // 使用本地 API 路由（Vercel 代理）
+      const res = await fetch(`/api/quote?symbols=${batch.join(',')}`, {
+        signal: AbortSignal.timeout(12000)
+      });
+      const data = await res.json();
+      (data?.quoteResponse?.result || []).forEach(q => {
+        const r = scoreVCP(q);
+        if (r) allHits.push(r);
+      });
+    } catch (e) {
+      console.warn('Batch error:', e);
+    }
+
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  allHits.sort((a, b) => b.score - a.score || a.fromHigh - b.fromHigh);
+
+  document.getElementById('progBar').style.width = '100%';
+  document.getElementById('progText').textContent = '扫描完成！';
+  setTimeout(() => document.getElementById('progWrap').classList.remove('show'), 1500);
+
+  const passCount = allHits.filter(h => h.pass).length;
+  const strongCount = allHits.filter(h => h.strength === 'strong').length;
+  document.getElementById('scan-summary').innerHTML =
+    `找到 <strong>${passCount}</strong> 只通过 VCP，其中 <strong style="color:var(--green)">${strongCount}</strong> 只强信号`;
+
+  document.getElementById('filterRow').style.display = 'flex';
+  const firstPill = document.querySelector('.filter-row .pill');
+  firstPill.classList.add('active');
+  setFilter('pass', firstPill);
+  updateBadges();
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-refresh"></i>重新扫描';
+}
+
+updateBadges();
+renderWatchlist();
+</script>
+</body>
+</html>
